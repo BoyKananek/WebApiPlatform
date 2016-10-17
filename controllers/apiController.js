@@ -5,7 +5,8 @@ var eventEmitter = new events.EventEmitter();
 //import models schema
 var User = require('../models/user');
 var TempUser = require('../models/tempuser');
-
+var RequestNewPassword = require('../models/request');
+//config smtp email 
 var smtpTransport = nodemailer.createTransport("SMTP",{
     service: "Gmail",
     auth: {
@@ -19,10 +20,10 @@ var mailOptions,host,link;
 module.exports = function(app){
     //sign up 
     /*
-    body{
+    parameters : body {
         username,
         email,
-        password 
+        password
     }
     */
     app.post('/signup',function(req,res){
@@ -128,6 +129,93 @@ module.exports = function(app){
         }else{
            res.end("<h1>Request is from unknown source</h1>");
         }
+    });
+
+    /////////////forget password system//////////////////////////////////////
+    app.post('/forgotPassword',function(req,res){
+        var requestPass = new RequestNewPassword();
+        var rand = uuid.v4();
+        host=req.get('host');
+        link="http://"+req.get('host')+"/requestNewPassword?id="+rand;
+        mailOptions={
+            to : req.body.email,
+            subject : "Reset Password System",
+            html : "Hello,<br> Please click this link to go to reset password page.<br><a href="+link+">Click here to reset password</a>" 
+        }
+        console.log(mailOptions);
+        requestPass.id = rand;
+        requestPass.email = req.body.email;
+        smtpTransport.sendMail(mailOptions,function(error,response){
+            if(error){
+                console.log(error);
+                res.end(error);
+            }else{
+                requestPass.save(function(err){
+                    if(err){
+                        console.log(err);
+                        res.end(err);
+                    }
+                    else{
+                        console.log("Making a new request to request new password");
+                        console.log('Wait...... for response from email');
+                        res.end('Wait for response');
+                    }
+                });
+                console.log("Message sent: " + response.message);
+            }
+        });  
+    });
+
+    //request password 
+    app.get('/requestNewPassword',function(req,res){
+        console.log(req.protocol+':/'+req.get('host'));
+        if((req.protocol+"://"+req.get('host'))==("http://"+host)){
+            //looking for request in database which one is match the id with the link
+            RequestNewPassword.findOne({'id':req.query.id},function(err,result){
+            if(err){
+                console.log(err);
+            }else{
+                if(result.id == req.query.id){
+                    res.render('resetPassword',{'email':result.email});
+                }else{
+                    res.end("Already done");
+                }
+            }
+            })
+        }
+    });
+    //update password 
+    app.post('/updatePassword',function(req,res){
+    var db = new User();
+    console.log(req.body.email);
+    var password = db.generateHash(req.body.password); // encode password 
+    User.findOne({'email':req.body.email},function(err,result){
+        if (err){
+            console.log(err);
+            res.end(err);
+        }else{
+            //update password and hash password tobe encode
+            result.update({
+            "password" : password // update password
+            },function(err,result){
+            if(err){
+                console.log(err);
+                res.end(err);
+            }else{
+                console.log('Update password successfully');
+                RequestNewPassword.remove({'email':req.body.email},function(req,result){
+                if(err){
+                    console.log(err);
+                }else{
+                    console.log('Remove request')
+                }
+                })
+                res.end('Changed');
+            }
+            })
+        }
+    })
+        res.render('changePass');
     });
 
     //show all users 
