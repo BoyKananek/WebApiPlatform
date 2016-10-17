@@ -1,0 +1,1 @@
+This is the wedding initiative web api for application 
