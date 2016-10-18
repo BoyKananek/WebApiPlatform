@@ -6,8 +6,8 @@ var morgan = require('morgan');
 
 //config app
 var app = new express();
-var apiController = require('./controllers/apiController');
-var htmlController = require('./controllers/htmlController');
+var apiRouter = require('./app/routers/apiRouter');
+var htmlRouter = require('./app/routers/htmlRouter');
 var configDB = require('./config/database.js');
 var port = 3000 || process.env.PORT;
 
@@ -38,9 +38,8 @@ app.all('*', function(req, res, next) {
 //setting template for app
 app.set('view engine','ejs');
 
-//using controller 
-htmlController(app);
-apiController(app);
-
+//using router for each router file
+app.use('/',htmlRouter);
+app.use('/api',apiRouter);
 app.listen(port);
 console.log('The magic happens on port '+ port);
