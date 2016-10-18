@@ -2,6 +2,7 @@
 var express = require('express');
 var bodyParser = require('body-parser');
 var mongoose = require('mongoose');
+var morgan = require('morgan');
 
 //config app
 var app = new express();
@@ -13,9 +14,12 @@ var port = 3000 || process.env.PORT;
 mongoose.connect(configDB.url);
 
 app.use('/assets', express.static(__dirname + '/public'));
+
 app.use(bodyParser()); // get information from html forms
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+
+app.use(morgan('dev'));
 
 //allow web page can access control to the api
 app.all('*', function(req, res, next) {
