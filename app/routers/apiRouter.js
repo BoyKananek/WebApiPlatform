@@ -254,7 +254,7 @@ router.post('/authenticate',function(req,res){
                 //log in successfull
                 //create token for that User
                 var token = jwt.sign(user,config.secret,{
-                    expiresIn : 60*60*6
+                    expiresIn : 60*60*4
                 });
                 res.json({
                     success: true,
