@@ -239,23 +239,23 @@ router.post('/updatePassword', function (req, res) {
             return not thing
     }
 */
-router.post('/login',function(req,res){
-    User.findOne({'username':req.body.username},function(err,user){
-        if(err) throw err;
-        if (!user){
+router.post('/login', function (req, res) {
+    User.findOne({ 'username': req.body.username }, function (err, user) {
+        if (err) throw err;
+        if (!user) {
             //user not found
-            res.json({success:false,message: 'Authentication failed. User not found.'});
+            res.json({ success: false, message: 'Authentication failed. User not found.' });
         }
-        else{
+        else {
             //user found 
-            if(!user.validPassword(req.body.password)){
-                res.json({success:false,message:'Authentication failed. Wrong password'});
+            if (!user.validPassword(req.body.password)) {
+                res.json({ success: false, message: 'Authentication failed. Wrong password' });
             }
-            else{
+            else {
                 //log in successfull
                 //create token for that User
-                var token = jwt.sign(user,config.secret,{
-                    expiresIn : 60*60*4
+                var token = jwt.sign(user, config.secret, {
+                    expiresIn: 60 * 60 * 4
                 });
                 res.json({
                     success: true,
@@ -276,26 +276,26 @@ router.post('/login',function(req,res){
     }
 
 */
-router.post('/logout',function(req,res){
+router.post('/logout', function (req, res) {
     var token = req.body.token;
     var blacklist = new BlackList();
     blacklist['token'] = token;
     //find token is it in the blacklist or not
-    BlackList.findOne({'token':token},function(err,result){
-        if(err){
+    BlackList.findOne({ 'token': token }, function (err, result) {
+        if (err) {
             console.log(err);
-        }else{
+        } else {
             //it is in the blacklist
-            if(result){
+            if (result) {
                 res.end('Already in the blacklist');
             }
-            else{ //it is not in the blacklist 
+            else { //it is not in the blacklist 
                 //save to blacklist
-                blacklist.save(function(err){
-                    if(err){
+                blacklist.save(function (err) {
+                    if (err) {
                         console.log('error :' + err);
                         res.end(err);
-                    }else{
+                    } else {
                         //save successfull
                         console.log('Log out successfull');
                         res.end('logout successfully');
