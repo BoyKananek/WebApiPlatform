@@ -1,30 +1,51 @@
 var express = require('express');
 var router = express.Router();
 var jwt = require('jsonwebtoken');
-
+var events = require('events');
+var eventEmitter = new events.EventEmitter();
 //import database file
 var config = require('../../config/database');
 var User = require('../models/user');
+var BlackList = require('../models/blacklist');
 
 /////////////////////////////Log in first//////////////////////////////////////
 router.use(function(req,res,next){
     var token = req.body.token || req.query.token || req.headers['x-access-token'];
-    if (token){
-        jwt.verify(token,config.secret,function(err,decoded){
-            if (err){
-                return res.json({success: false,message: 'Failed to authenticate token'});
+    //find token (Is it in the blacklist or not?)
+    BlackList.findOne({'token':token},function(err,result){
+        if(err){
+            console.log(err);
+        }else{
+            if(result){
+                //if it is 
+                console.log('found token in blacklist');
+                res.json({success: false, message: 'This token had already logged out'});
             }else{
-                req.decoded = decoded;
-                next();
+                //if it is not
+                eventEmitter.emit('authenticate');
             }
-        });
-    }
-    else{
-        return res.status(403).send({
-            success:false,
-            message: 'No token provided.'
-        });
-    }
+        }
+    });
+    eventEmitter.on('authenticate', function () {
+        if (token){
+            jwt.verify(token,config.secret,function(err,decoded){
+                if (err){
+                    return res.json({success: false,message: 'Failed to authenticate token'});
+                }
+                else{
+                    req.decoded = decoded;
+                    next();
+                }
+            });
+        }
+        else{
+            return res.status(403).send({
+                success:false,
+                message: 'No token provided.'
+            });
+        }
+
+    });
 });
 
 router.get('/users', function (req, res) {

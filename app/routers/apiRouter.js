@@ -10,6 +10,7 @@ var User = require('../models/user');
 var TempUser = require('../models/tempuser');
 var RequestNewPassword = require('../models/request');
 var config = require('../../config/database');
+var BlackList = require('../models/blacklist');
 
 //config smtp email 
 var smtpTransport = nodemailer.createTransport("SMTP", {
@@ -238,7 +239,7 @@ router.post('/updatePassword', function (req, res) {
             return not thing
     }
 */
-router.post('/authenticate',function(req,res){
+router.post('/login',function(req,res){
     User.findOne({'username':req.body.username},function(err,user){
         if(err) throw err;
         if (!user){
@@ -265,5 +266,44 @@ router.post('/authenticate',function(req,res){
         }
     });
 });
+
+/////////////////// Log out  create blacklist /////////////////////
+// POST METHOD //
+// send token long with the req.body //
+/*
+    Parameter:{
+        token : String
+    }
+
+*/
+router.post('/logout',function(req,res){
+    var token = req.body.token;
+    var blacklist = new BlackList();
+    blacklist['token'] = token;
+    //find token is it in the blacklist or not
+    BlackList.findOne({'token':token},function(err,result){
+        if(err){
+            console.log(err);
+        }else{
+            //it is in the blacklist
+            if(result){
+                res.end('Already in the blacklist');
+            }
+            else{ //it is not in the blacklist 
+                //save to blacklist
+                blacklist.save(function(err){
+                    if(err){
+                        console.log('error :' + err);
+                        res.end(err);
+                    }else{
+                        //save successfull
+                        console.log('Log out successfull');
+                        res.end('logout successfully');
+                    }
+                });
+            }
+        }
+    });
+})
 
 module.exports = router;
