@@ -26,6 +26,8 @@ router.use(function(req,res,next){
             }
         }
     });
+    //when it trigger the event start 
+    //to check the request before response to client 
     eventEmitter.on('authenticate', function () {
         if (token){
             jwt.verify(token,config.secret,function(err,decoded){
@@ -33,6 +35,7 @@ router.use(function(req,res,next){
                     return res.json({success: false,message: 'Failed to authenticate token'});
                 }
                 else{
+                    //if token verify the system will decoded and send the response back to client
                     req.decoded = decoded;
                     next();
                 }
@@ -47,7 +50,11 @@ router.use(function(req,res,next){
 
     });
 });
-
+// client should send the token along with url in params
+/*
+    key : token 
+    value : token string variable
+*/
 router.get('/users', function (req, res) {
     User.find({}, function (err, result) {
         if (err) {
