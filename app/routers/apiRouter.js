@@ -17,40 +17,31 @@ var smtpTransport = nodemailer.createTransport("SMTP", {
     service: "Gmail",
     auth: {
         //gmail for sending the email 
-        user: "digitalteamburda@gmail.com",
-        pass: "Digital2016@@"
+        user: "roundabulb@gmail.com",
+        pass: "Ballboydewtan"
     }
 });
 var mailOptions, host, link;
 
 /*
     parameter : {
-        username : String,
+        name : String,
         email : String,
         password : String
     }
 */
 router.post('/signup', function (req, res) {
     var tempUser = new TempUser();
-    User.findOne({ 'email': req.body.email }, function (err, result) {
+
+    User.findOne({ 'local.email': req.body.email }, function (err, result) {
         if (err) {
             console.log(err);
         } else {
             if (result == null) {
                 console.log('you can use this email');
-                User.findOne({ 'username': req.body.username }, function (err, result) {
-                    if (err) {
-                        console.log(err)
-                    } else {
-                        if (result == null) {
-                            console.log('you can use this username');
-                            eventEmitter.emit('Send');
-                        } else {
-                            res.end('this username is already taken');
-                        }
-                    }
-                })
+                eventEmitter.emit('Send');
             } else {
+                console.log('This email is already taken');
                 res.end('this email is already taken');
             }
         }
@@ -66,7 +57,7 @@ router.post('/signup', function (req, res) {
         }
         console.log(mailOptions);
         tempUser.id = rand;
-        tempUser.username = req.body.username;
+        tempUser.name = req.body.name;
         tempUser.email = req.body.email;
         tempUser.password = req.body.password;
         smtpTransport.sendMail(mailOptions, function (error, response) {
@@ -83,7 +74,7 @@ router.post('/signup', function (req, res) {
                         res.end('Wait....');
                     }
                 });
-                console.log("Message sned: " + response.message);
+                console.log("Message send: " + response.message);
             }
         });
     })
@@ -99,33 +90,37 @@ router.get('/verify', function (req, res) {
             if (err) {
                 console.log(err);
             } else {
-                console.log('Found request');
-                db['username'] = result.username;
-                db['email'] = result.email;
-                db['password'] = db.generateHash(result.password);
-                id = result.id;
-                if (req.query.id == id) {
-                    db.save(function (err) {
-                        if (err) {
-                            console.log(err);
-                        } else {
-                            console.log('Save successfull');
-                        }
-                    });
-                    TempUser.remove({ 'email': result.email }, function (err) {
-                        if (err) {
-                            console.log(err);
-                        } else {
-                            console.log('Remove tempuser already');
-                        }
-                    });
-                    console.log("Email is verified");
-                    res.render('verifyPage', { data: result.email });
-                    //res.end("Email "+result.email+" is been Successfully verified");
-                }
-                else {
-                    console.log("email is not verified");
-                    res.end("<h1>Bad Request</h1>");
+                if(result != null){
+                    console.log('Found request');
+                    db.local['name'] = result.name;
+                    db.local['email'] = result.email;
+                    db.local['password'] = db.generateHash(result.password);
+                    id = result.id;
+                    if (req.query.id == id) {
+                        db.save(function (err) {
+                            if (err) {
+                                console.log(err);
+                            } else {
+                                console.log('Save successfull');
+                            }
+                        });
+                        TempUser.remove({ 'email': result.email }, function (err) {
+                            if (err) {
+                                console.log(err);
+                            } else {
+                                console.log('Remove tempuser already');
+                            }
+                        });
+                        console.log("Email is verified");
+                        res.render('verifyPage', { data: result.email });
+                        //res.end("Email "+result.email+" is been Successfully verified");
+                    }
+                    else {
+                        console.log("email is not verified");
+                        res.end("<h1>Bad Request</h1>");
+                    }
+                }else{
+                    res.end("<h1>This email is already verified.</h1>");
                 }
             }
         });
@@ -141,55 +136,71 @@ router.get('/verify', function (req, res) {
     }
 */
 router.post('/forgotPassword', function (req, res) {
-    var requestPass = new RequestNewPassword();
-    var rand = uuid.v4();
-    host = req.get('host');
-    link = "http://" + req.get('host') + "/requestNewPassword?id=" + rand;
-    mailOptions = {
-        to: req.body.email,
-        subject: "Reset Password System",
-        html: "Hello,<br> Please click this link to go to reset password page.<br><a href=" + link + ">Click here to reset password</a>"
-    }
-    console.log(mailOptions);
-    requestPass.id = rand;
-    requestPass.email = req.body.email;
-    smtpTransport.sendMail(mailOptions, function (error, response) {
-        if (error) {
-            console.log(error);
-            res.end(error);
+    User.findOne({ 'local.email': req.body.email }, function (err, result) {
+        if (err) {
+            res.end(err);
         } else {
-            requestPass.save(function (err) {
-                if (err) {
-                    console.log(err);
-                    res.end(err);
+            if (result == null) {
+                res.json({ success: false, message: 'This email is not existing in the system' })
+            } else {
+                var requestPass = new RequestNewPassword();
+                var rand = uuid.v4();
+                host = req.get('host');
+                link = "http://" + req.get('host') + "/api/requestNewPassword?id=" + rand;
+                mailOptions = {
+                    to: req.body.email,
+                    subject: "Reset Password System",
+                    html: "Hello,<br> Please click this link to go to reset password page.<br><a href=" + link + ">Click here to reset password</a>"
                 }
-                else {
-                    console.log("Making a new request to request new password");
-                    console.log('Wait...... for response from email');
-                    res.end('Wait for response');
-                }
-            });
-            console.log("Message sent: " + response.message);
+                console.log(mailOptions);
+                requestPass.id = rand;
+                requestPass.email = req.body.email;
+                smtpTransport.sendMail(mailOptions, function (error, response) {
+                    if (error) {
+                        console.log(error);
+                        res.end(error);
+                    } else {
+                        requestPass.save(function (err) {
+                            if (err) {
+                                console.log(err);
+                                res.end(err);
+                            }
+                            else {
+                                console.log("Making a new request to request new password");
+                                console.log('Wait...... for response from email');
+                                res.json({ success: true, message: 'Please check your email address to continue' })
+                            }
+                        });
+                        console.log("Message sent: " + response.message);
+                    }
+                });
+            }
         }
-    });
+    })
 });
 
 //request password 
 router.get('/requestNewPassword', function (req, res) {
+
     console.log(req.protocol + ':/' + req.get('host'));
     if ((req.protocol + "://" + req.get('host')) == ("http://" + host)) {
         //looking for request in database which one is match the id with the link
         RequestNewPassword.findOne({ 'id': req.query.id }, function (err, result) {
             if (err) {
                 console.log(err);
-            } else {
+            } else if (result != null){
                 if (result.id == req.query.id) {
                     res.render('resetPassword', { 'email': result.email });
                 } else {
                     res.end("Already done");
                 }
+            }else{
+                res.end("Already done");
             }
         })
+    } else {
+        console.log("Already expired!");
+        res.end("Already expired!");
     }
 });
 //update password 
@@ -197,30 +208,36 @@ router.post('/updatePassword', function (req, res) {
     var db = new User();
     console.log(req.body.email);
     var password = db.generateHash(req.body.password); // encode password 
-    User.findOne({ 'email': req.body.email }, function (err, result) {
+    User.findOne({ 'local.email': req.body.email }, function (err, result) {
         if (err) {
             console.log(err);
             res.end(err);
         } else {
             //update password and hash password tobe encode
-            result.update({
-                "password": password // update password
-            }, function (err, result) {
-                if (err) {
-                    console.log(err);
-                    res.end(err);
-                } else {
-                    console.log('Update password successfully');
-                    RequestNewPassword.remove({ 'email': req.body.email }, function (req, result) {
-                        if (err) {
-                            console.log(err);
-                        } else {
-                            console.log('Remove request')
-                        }
-                    })
-                    res.end('Changed');
-                }
-            })
+            console.log(result);
+            if (result == null) {
+                res.end("This email is not existed in the system");
+            }
+            else {
+                result.update({
+                    "local.password": password // update password
+                }, function (err, result) {
+                    if (err) {
+                        console.log(err);
+                        res.end(err);
+                    } else {
+                        console.log('Update password successfully');
+                        RequestNewPassword.remove({ 'email': req.body.email }, function (req, result) {
+                            if (err) {
+                                console.log(err);
+                            } else {
+                                console.log('Remove request')
+                            }
+                        });
+                        res.end('Changed');
+                    }
+                });
+            }
         }
     })
     res.render('changePass');
@@ -240,16 +257,17 @@ router.post('/updatePassword', function (req, res) {
     }
 */
 router.post('/login', function (req, res) {
-    User.findOne({ 'username': req.body.username }, function (err, user) {
+    var session = new Session();
+    User.findOne({ 'local.email': req.body.email }, function (err, user) {
         if (err) throw err;
         if (!user) {
             //user not found
-            res.json({ success: false, message: 'Authentication failed. User not found.' });
+            res.json({ success: false, message: 'Authentication failed, email or password is incorrect.' });
         }
         else {
             //user found 
             if (!user.validPassword(req.body.password)) {
-                res.json({ success: false, message: 'Authentication failed. Wrong password' });
+                res.json({ success: false, message: 'Authentication failed, email or password is incorrect' });
             }
             else {
                 //log in successfull
@@ -257,9 +275,25 @@ router.post('/login', function (req, res) {
                 var token = jwt.sign(user, config.secret, {
                     expiresIn: 60 * 60 * 4
                 });
+                console.log('Login with email');
+                session["type"] = "email";
+                session['token'] = token;
+                session['email'] = user.local.email;
+                session['name'] = user.local.name;
+                session['birthday'] = user.birthday;
+                session['sign'] = user.sign;
+                //create session for that user
+                session.save(function (err) {
+                    if (err) {
+                        console.log(err);
+                        res.end(err);
+                    } else {
+                        console.log("Login successfully");
+                    }
+                });
+
                 res.json({
                     success: true,
-                    message: 'Login successfully',
                     token: token
                 });
             }
@@ -278,32 +312,20 @@ router.post('/login', function (req, res) {
 */
 router.post('/logout', function (req, res) {
     var token = req.body.token;
-    var blacklist = new BlackList();
-    blacklist['token'] = token;
+    var response = {};
     //find token is it in the blacklist or not
-    BlackList.findOne({ 'token': token }, function (err, result) {
+    Session.remove({ 'token': token }, function (err, result) {
         if (err) {
             console.log(err);
+            response = err;
+            res.json(response);
         } else {
-            //it is in the blacklist
-            if (result) {
-                res.end('Already in the blacklist');
-            }
-            else { //it is not in the blacklist 
-                //save to blacklist
-                blacklist.save(function (err) {
-                    if (err) {
-                        console.log('error :' + err);
-                        res.end(err);
-                    } else {
-                        //save successfull
-                        console.log('Log out successfull');
-                        res.end('logout successfully');
-                    }
-                });
-            }
+            response = { "success": "true", "message": "Logout Successfully" };
+            console.log('Remove Session');
+            res.json(response);
         }
     });
 })
+
 
 module.exports = router;
