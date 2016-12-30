@@ -6,7 +6,8 @@ var eventEmitter = new events.EventEmitter();
 //import database file
 var config = require('../../config/database');
 var User = require('../models/user');
-var BlackList = require('../models/blacklist');
+var Session = require('../models/session');
+var request = require('request');
 
 /////////////////////////////Log in first//////////////////////////////////////
 router.use(function (req, res, next) {

@@ -10,7 +10,7 @@ var User = require('../models/user');
 var TempUser = require('../models/tempuser');
 var RequestNewPassword = require('../models/request');
 var config = require('../../config/database');
-var BlackList = require('../models/blacklist');
+var Session = require('../models/session');
 
 //config smtp email 
 var smtpTransport = nodemailer.createTransport("SMTP", {
